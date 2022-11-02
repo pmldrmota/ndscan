@@ -8,12 +8,12 @@ from .._qt import QtCore
 from .annotation_items import ComputedCurveItem, CurveItem, VLineItem
 from .cursor import LabeledCrosshairCursor
 from .model import ScanModel
-from .model.select_point import SelectPointFromScanModel
-from .model.subscan import create_subscan_roots
-from .plot_widgets import add_source_id_label, SubplotMenuPlotWidget
+from .plot_widgets import add_source_id_label, ContextMenuPlotWidget
 from .utils import (extract_linked_datasets, extract_scalar_channels,
                     format_param_identity, group_channels_into_axes, setup_axis_item,
                     FIT_COLORS, SERIES_COLORS)
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -155,13 +155,14 @@ class _XYSeries(QtCore.QObject):
         self.num_current_points = 0
 
 
-class XY1DPlotWidget(SubplotMenuPlotWidget):
+class XY1DPlotWidget(ContextMenuPlotWidget):
     error = QtCore.pyqtSignal(str)
     ready = QtCore.pyqtSignal()
 
     def __init__(self, model: ScanModel, get_alternate_plot_names):
-        super().__init__(model.context, get_alternate_plot_names)
+        super().__init__()
 
+        self.get_alternate_plot_names = get_alternate_plot_names
         self.model = model
         self.model.channel_schemata_changed.connect(self._initialise_series)
         self.model.points_appended.connect(self._update_points)
@@ -174,30 +175,19 @@ class XY1DPlotWidget(SubplotMenuPlotWidget):
 
         self.model.points_rewritten.connect(rewritten)
 
-        self.selected_point_model = SelectPointFromScanModel(self.model)
-
         self.annotation_items = []
         self.series = []
         self.unique_x_data = set()
         self.found_duplicate_x_data = False
         self.averaging_enabled = False
 
-        x_schema = self.model.axes[0]
-        self.x_param_spec = x_schema["param"]["spec"]
-        self.x_unit_suffix, self.x_data_to_display_scale = setup_axis_item(
-            self.getAxis("bottom"),
-            [(x_schema["param"]["description"], format_param_identity(x_schema), None,
-              self.x_param_spec)])
-        self.y_unit_suffix = None
-        self.y_data_to_display_scale = None
-        self.crosshair = None
+        self.x_schema = self.model.axes[0]
+        self.x_param_spec = self.x_schema["param"]["spec"]
+
+        self.y_unit_suffixes = []
+        self.y_data_to_display_scales = []
+        self.crosshairs = []
         self._highlighted_spot = None
-        self.showGrid(x=True, y=True)
-
-        view_box = self.getPlotItem().getViewBox()
-        self.source_label = add_source_id_label(view_box, self.model.context)
-
-        view_box.scene().sigMouseClicked.connect(self._handle_scene_click)
 
     def _initialise_series(self, channels):
         # Remove all currently shown items and any extra axes added.
@@ -207,7 +197,7 @@ class XY1DPlotWidget(SubplotMenuPlotWidget):
         self.unique_x_data.clear()
         self.found_duplicate_x_data = False
         self._clear_annotations()
-        self.reset_y_axes()
+        self.clear()
 
         try:
             data_names, error_bar_names = extract_scalar_channels(channels)
@@ -218,7 +208,8 @@ class XY1DPlotWidget(SubplotMenuPlotWidget):
         series_idx = 0
         axes = group_channels_into_axes(channels, data_names)
         for names in axes:
-            axis, view_box = self.new_y_axis()
+            plot = self.new_plot()
+            vb = plot.getViewBox()
 
             info = []
             for name in names:
@@ -243,20 +234,27 @@ class XY1DPlotWidget(SubplotMenuPlotWidget):
 
                 series_idx += 1
 
-            suffix, scale = setup_axis_item(axis, info)
-            if self.y_unit_suffix is None:
-                # FIXME: Add multiple lines to the crosshair.
-                self.y_unit_suffix = suffix
-                self.y_data_to_display_scale = scale
+            suffix, scale = setup_axis_item(plot.getAxis("left"), info)
+            self.y_unit_suffixes.append(suffix)
+            self.y_data_to_display_scales.append(scale)
 
-        if self.crosshair is None:
-            # FIXME: Reinitialise crosshair as necessary on schema changes.
-            self.crosshair = LabeledCrosshairCursor(self, self.getPlotItem(),
-                                                    self.x_unit_suffix,
-                                                    self.x_data_to_display_scale,
-                                                    self.y_unit_suffix,
-                                                    self.y_data_to_display_scale)
-        self.subscan_roots = create_subscan_roots(self.selected_point_model)
+            add_source_id_label(vb, self.model.context)
+
+        if len(self.plots) > 1:
+            self.link_x_axes()
+
+        self.x_unit_suffix, self.x_data_to_display_scale = setup_axis_item(
+            self.plots[-1].getAxis("bottom"),
+            [(self.x_schema["param"]["description"], format_param_identity(
+                self.x_schema), None, self.x_param_spec)])
+
+        for i, plot in enumerate(self.plots):
+            self.crosshairs.append(
+                LabeledCrosshairCursor(self, plot, self.x_unit_suffix,
+                                       self.x_data_to_display_scale, self.y_unit_suffixes[i],
+                                       self.y_data_to_display_scales[i]))
+
+        self._monkey_patch_context_menu()
 
         # Make sure we put back annotations (if they haven't changed but the points
         # have been rewritten, there might not be an annotations_changed event).
@@ -352,7 +350,7 @@ class XY1DPlotWidget(SubplotMenuPlotWidget):
             logger.info("Ignoring annotation of kind '%s' with coordinates %s", a.kind,
                         list(a.coordinates.keys()))
 
-    def build_context_menu(self, builder):
+    def build_context_menu(self, plot_idx, builder):
         x_schema = self.model.axes[0]
 
         if self.model.context.is_online_master():
@@ -379,7 +377,7 @@ class XY1DPlotWidget(SubplotMenuPlotWidget):
         if not self.crosshair:
             logger.warning("Plot not initialised yet, ignoring set dataset request")
             return
-        self.model.context.set_dataset(dataset_key, self.crosshair.last_x)
+        self.model.context.set_dataset(dataset_key, self.crosshairs[plot_idx].last_x)
 
     def _highlight_spot(self, spot):
         if self._highlighted_spot is not None:
