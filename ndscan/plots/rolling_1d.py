@@ -67,7 +67,7 @@ class Rolling1DPlotWidget(ContextMenuPlotWidget):
     error = QtCore.pyqtSignal(str)
     ready = QtCore.pyqtSignal()
 
-    def __init__(self, model: SinglePointModel):
+    def __init__(self, model: SinglePointModel, get_alternate_plot_names):
         super().__init__()
 
         self.model = model
