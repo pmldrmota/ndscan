@@ -10,7 +10,7 @@ from .cursor import LabeledCrosshairCursor
 from .model import ScanModel
 from .model.select_point import SelectPointFromScanModel
 from .model.subscan import create_subscan_roots
-from .plot_widgets import add_source_id_label, ContextMenuPlotWidget
+from .plot_widgets import add_source_id_label, SubplotMenuPlotWidget
 from .utils import (extract_linked_datasets, extract_scalar_channels,
                     format_param_identity, group_channels_into_axes, setup_axis_item,
                     FIT_COLORS, SERIES_COLORS)
@@ -157,12 +157,12 @@ class _XYSeries(QtCore.QObject):
         self.num_current_points = 0
 
 
-class XY1DPlotWidget(ContextMenuPlotWidget):
+class XY1DPlotWidget(SubplotMenuPlotWidget):
     error = QtCore.pyqtSignal(str)
     ready = QtCore.pyqtSignal()
 
     def __init__(self, model: ScanModel, get_alternate_plot_names):
-        super().__init__()
+        super().__init__(model.context, get_alternate_plot_names)
 
         self.get_alternate_plot_names = get_alternate_plot_names
         self.model = model

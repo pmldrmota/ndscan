@@ -3,7 +3,7 @@ import pyqtgraph
 
 from .._qt import QtCore, QtWidgets
 from .model import SinglePointModel
-from .plot_widgets import add_source_id_label, ContextMenuPlotWidget
+from .plot_widgets import add_source_id_label, AlternateMenuPlotWidget
 from .utils import (extract_scalar_channels, group_channels_into_axes, setup_axis_item,
                     SERIES_COLORS)
 
@@ -63,12 +63,12 @@ class _Series:
             self.values = self.values[-n:, :]
 
 
-class Rolling1DPlotWidget(ContextMenuPlotWidget):
+class Rolling1DPlotWidget(AlternateMenuPlotWidget):
     error = QtCore.pyqtSignal(str)
     ready = QtCore.pyqtSignal()
 
     def __init__(self, model: SinglePointModel, get_alternate_plot_names):
-        super().__init__()
+        super().__init__(get_alternate_plot_names)
 
         self.model = model
         self.model.channel_schemata_changed.connect(self._initialise_series)
