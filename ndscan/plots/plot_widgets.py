@@ -13,16 +13,23 @@ from .cursor import LabeledCrosshairCursor
 from .model import Context
 
 
-class MultiYAxisPlotWidget(pyqtgraph.PlotWidget):
-    """PlotWidget with the ability to create multiple y axes linked to the same x axis.
+class MultiYAxisPlotWidget:
+    """Wrap PlotItem with the ability to create multiple y axes linked to the same x axis.
 
     This is somewhat of a hack following the MultiplePlotAxes pyqtgraph example.
     """
-    def __init__(self):
+    def __init__(self, plot_item):
         super().__init__()
+        self.plot_item = plot_item
         self._num_y_axes = 0
         self._additional_view_boxes = []
         self._additional_right_axes = []
+
+    def getPlotItem(self):
+        return self.plot_item
+
+    def getViewBox(self):
+        return self.plot_item.getViewBox()
 
     def new_y_axis(self):
         self._num_y_axes += 1
@@ -76,22 +83,25 @@ class VerticalStackPlotWidget(pyqtgraph.GraphicsLayoutWidget):
     def __init__(self):
         super().__init__()
         self.plots = []
-        self.current_plot = None
 
     def new_plot(self):
-        plot = self.addPlot()
-        plot.showGrid(x=True, y=True)
+        """Extends layout vertically by one `MultiYAxisPlotWidget`
+        """
+        plot = MultiYAxisPlotWidget(self.addPlot())
         self.nextRow()
-
-        self.current_plot = plot
         self.plots.append(plot)
-
         return plot
 
     def link_x_axes(self):
         for plot in self.plots[:-1]:
-            plot.setXLink(self.plots[-1])
-            plot.hideAxis("bottom")
+            plot.getPlotItem().setXLink(self.plots[-1].getPlotItem())
+            plot.getPlotItem().hideAxis("bottom")
+
+    def clear(self):
+        for plot in self.plots:
+            plot.reset_y_axes()
+        self.plots.clear()
+        super().clear()
 
 
 class ContextMenuBuilder:
@@ -156,7 +166,7 @@ class ContextMenuPlotWidget(VerticalStackPlotWidget):
             vb.raiseContextMenu = _raise_context_menu
 
         for i, plot in enumerate(self.plots):
-            _override_get_context_menus(i, plot)
+            _override_get_context_menus(i, plot.getPlotItem())
             _override_raise_context_menu(plot.getViewBox())
 
     def build_context_menu(self, plot_idx, builder: ContextMenuBuilder) -> None:

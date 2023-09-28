@@ -94,7 +94,7 @@ class Rolling1DPlotWidget(AlternateMenuPlotWidget):
         axes = group_channels_into_axes(channels, data_names)
         for names in axes:
             plot = self.new_plot()
-            vb = plot.getViewBox()
+            axis, vb = plot.new_y_axis()
 
             info = []
             for name in names:
@@ -118,7 +118,7 @@ class Rolling1DPlotWidget(AlternateMenuPlotWidget):
 
                 series_idx += 1
 
-            setup_axis_item(plot.getAxis("left"), info)
+            setup_axis_item(axis, info)
             add_source_id_label(vb, self.model.context)
 
         self.ready.emit()

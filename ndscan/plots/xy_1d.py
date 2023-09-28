@@ -212,7 +212,7 @@ class XY1DPlotWidget(SubplotMenuPlotWidget):
         axes = group_channels_into_axes(channels, data_names)
         for names in axes:
             plot = self.new_plot()
-            view_box = plot.getViewBox()
+            axis, view_box = plot.new_y_axis()
 
             info = []
             for name in names:
@@ -237,7 +237,7 @@ class XY1DPlotWidget(SubplotMenuPlotWidget):
 
                 series_idx += 1
 
-            suffix, scale = setup_axis_item(plot.getAxis("left"), info)
+            suffix, scale = setup_axis_item(axis, info)
             self.y_unit_suffixes.append(suffix)
             self.y_data_to_display_scales.append(scale)
 
@@ -247,13 +247,13 @@ class XY1DPlotWidget(SubplotMenuPlotWidget):
             self.link_x_axes()
 
         self.x_unit_suffix, self.x_data_to_display_scale = setup_axis_item(
-            self.plots[-1].getAxis("bottom"),
+            self.plots[-1].getPlotItem().getAxis("bottom"),
             [(self.x_schema["param"]["description"], format_param_identity(
                 self.x_schema), None, self.x_param_spec)])
 
         for i, plot in enumerate(self.plots):
             self.crosshairs.append(
-                LabeledCrosshairCursor(self, plot, self.x_unit_suffix,
+                LabeledCrosshairCursor(self, plot.getPlotItem(), self.x_unit_suffix,
                                        self.x_data_to_display_scale, self.y_unit_suffixes[i],
                                        self.y_data_to_display_scales[i]))
 
