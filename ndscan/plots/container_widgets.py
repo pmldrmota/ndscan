@@ -90,7 +90,7 @@ class PlotContainerWidget(QtWidgets.QWidget):
         self.layout.addWidget(self.widget_stack)
 
         if isinstance(self.model, SinglePointModel):
-            self.plot = Rolling1DPlotWidget(self.model, self._get_alternate_names)
+            self.plot = Rolling1DPlotWidget(self.model)
             self.model.channel_schemata_changed.connect(self._create_subscan_roots)
         else:
             try:
