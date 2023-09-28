@@ -214,7 +214,7 @@ class XY1DPlotWidget(ContextMenuPlotWidget):
         axes = group_channels_into_axes(channels, data_names)
         for names in axes:
             plot = self.new_plot()
-            vb = plot.getViewBox()
+            view_box = plot.getViewBox()
 
             info = []
             for name in names:
@@ -243,7 +243,7 @@ class XY1DPlotWidget(ContextMenuPlotWidget):
             self.y_unit_suffixes.append(suffix)
             self.y_data_to_display_scales.append(scale)
 
-            add_source_id_label(vb, self.model.context)
+            add_source_id_label(view_box, self.model.context)
 
         if len(self.plots) > 1:
             self.link_x_axes()
