@@ -393,7 +393,7 @@ class XY1DPlotWidget(ContextMenuPlotWidget):
             self._highlighted_spot = spot
 
     def _point_clicked(self, scatter_plot_item, spot_items):
-        if not spot_items:
+        if len(spot_items) == 0:
             # No points clicked – events don't seem to emitted in this case anyway.
             self._background_clicked()
             return
