@@ -163,8 +163,6 @@ class XY1DPlotWidget(SubplotMenuPlotWidget):
 
     def __init__(self, model: ScanModel, get_alternate_plot_names):
         super().__init__(model.context, get_alternate_plot_names)
-
-        self.get_alternate_plot_names = get_alternate_plot_names
         self.model = model
         self.model.channel_schemata_changed.connect(self._initialise_series)
         self.model.points_appended.connect(self._update_points)
