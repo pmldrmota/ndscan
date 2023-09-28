@@ -361,7 +361,8 @@ class XY1DPlotWidget(SubplotMenuPlotWidget):
         if self.model.context.is_online_master():
             for d in extract_linked_datasets(x_schema["param"]):
                 action = builder.append_action("Set '{}' from crosshair".format(d))
-                action.triggered.connect(lambda: self._set_dataset_from_crosshair_x(d))
+                action.triggered.connect(
+                    lambda: self._set_dataset_from_crosshair_x(plot_idx, d))
             builder.ensure_separator()
 
         if self.found_duplicate_x_data:
@@ -378,8 +379,8 @@ class XY1DPlotWidget(SubplotMenuPlotWidget):
         self.averaging_enabled = enabled
         self._update_points(self.model.get_point_data())
 
-    def _set_dataset_from_crosshair_x(self, dataset_key):
-        if not self.crosshair:
+    def _set_dataset_from_crosshair_x(self, plot_idx, dataset_key):
+        if not self.crosshairs:
             logger.warning("Plot not initialised yet, ignoring set dataset request")
             return
         self.model.context.set_dataset(dataset_key, self.crosshairs[plot_idx].last_x)
