@@ -8,6 +8,8 @@ from .._qt import QtCore
 from .annotation_items import ComputedCurveItem, CurveItem, VLineItem
 from .cursor import LabeledCrosshairCursor
 from .model import ScanModel
+from .model.select_point import SelectPointFromScanModel
+from .model.subscan import create_subscan_roots
 from .plot_widgets import add_source_id_label, ContextMenuPlotWidget
 from .utils import (extract_linked_datasets, extract_scalar_channels,
                     format_param_identity, group_channels_into_axes, setup_axis_item,
@@ -175,6 +177,8 @@ class XY1DPlotWidget(ContextMenuPlotWidget):
 
         self.model.points_rewritten.connect(rewritten)
 
+        self.selected_point_model = SelectPointFromScanModel(self.model)
+
         self.annotation_items = []
         self.series = []
         self.unique_x_data = set()
@@ -198,6 +202,7 @@ class XY1DPlotWidget(ContextMenuPlotWidget):
         self.found_duplicate_x_data = False
         self._clear_annotations()
         self.clear()
+        self.subscan_roots = create_subscan_roots(self.selected_point_model)
 
         try:
             data_names, error_bar_names = extract_scalar_channels(channels)
