@@ -160,6 +160,68 @@ def group_channels_into_axes(channels: Dict[str, Any],
     return [[name for (_, name) in axis] for axis in axes]
 
 
+def group_axes_into_plots(channels: Dict[str, Any],
+                          axes_names: List[List[str]]) -> List[List[List[str]]]:
+    """Group axes returned by :func:`group_channels_into_axes` into plots by
+        `share_plot_with` annotations in the channel's `display_hints`.
+
+    :param channels: ndscan.channels metadata.
+    :param axes_names: The axes to group, see :func:`group_channels_into_axes`.
+        Sets the order of results.
+
+    :return: A list of lists of lists giving the channel names along each axis for each
+        plot.
+    """
+    path_to_name = {
+        channels[name]["path"]: name
+        for names in axes_names
+        for name in names
+    }
+
+    def get_share_name(name):
+        display_hints = channels[name].get("display_hints", {})
+        path = display_hints.get("share_plot_with", None)
+        if path is None:
+            return name
+        if path not in path_to_name:
+            logger.warning("share_plot_with target path '%s' does not exist", path)
+            return name
+        return path_to_name[path]
+
+    name_to_axis_idx = {
+        name: idx
+        for (idx, axis) in enumerate(axes_names)
+        for name in axis
+    }
+
+    axes_share_idxs = []  # List of sets of indices of axes sharing one plot.
+    for (idx, names) in enumerate(axes_names):
+        # The axis indices with which the current axis is to share a plot.
+        share_idxs = set([idx])
+        for name in names:
+            # Map all channel names specified to share a plot with the current axis
+            # to their respective axis.
+            share_idxs.add(name_to_axis_idx[get_share_name(name)])
+
+        # If the current indices are part of any previous plot, merge that
+        # plot into the current one.
+        for existing_share_idxs in axes_share_idxs:
+            # `.copy()` to avoid changed set size during iteration.
+            for share_idx in share_idxs.copy():
+                if share_idx in existing_share_idxs:
+                    share_idxs.update(existing_share_idxs)
+                    existing_share_idxs.clear()
+
+        axes_share_idxs.append(share_idxs)
+
+    # Skip empty sets and sort the remaining axes in original order.
+    plots = [
+        sorted(list(share_idxs)) for share_idxs in axes_share_idxs
+        if len(share_idxs) > 0
+    ]
+    return [[axes_names[axis] for axis in plot] for plot in plots]
+
+
 def extract_linked_datasets(param_schema: Dict[str, Any]) -> List[str]:
     """Extract datasets mentioned in the default value of the given parameter schema.
 
