@@ -12,10 +12,9 @@ from .model.select_point import SelectPointFromScanModel
 from .model.subscan import create_subscan_roots
 from .plot_widgets import add_source_id_label, SubplotMenuPlotWidget
 from .utils import (extract_linked_datasets, extract_scalar_channels,
-                    format_param_identity, group_channels_into_axes, setup_axis_item,
-                    FIT_COLORS, SERIES_COLORS)
-
-
+                    format_param_identity, group_channels_into_axes,
+                    group_axes_into_plots, setup_axis_item, FIT_COLORS,
+                    SERIES_COLORS)
 
 logger = logging.getLogger(__name__)
 
@@ -210,37 +209,39 @@ class XY1DPlotWidget(SubplotMenuPlotWidget):
 
         series_idx = 0
         axes = group_channels_into_axes(channels, data_names)
-        for names in axes:
+        plots_axes = group_axes_into_plots(channels, axes)
+
+        for axes_names in plots_axes:
             plot = self.new_plot()
-            axis, view_box = plot.new_y_axis()
+            for names in axes_names:
+                axis, view_box = plot.new_y_axis()
 
-            info = []
-            for name in names:
-                color = SERIES_COLORS[series_idx % len(SERIES_COLORS)]
-                data_item = pyqtgraph.ScatterPlotItem(pen=None, brush=color, size=6)
-                data_item.sigClicked.connect(self._point_clicked)
+                info = []
+                for name in names:
+                    color = SERIES_COLORS[series_idx % len(SERIES_COLORS)]
+                    data_item = pyqtgraph.ScatterPlotItem(pen=None, brush=color, size=6)
+                    data_item.sigClicked.connect(self._point_clicked)
 
-                error_bar_name = error_bar_names.get(name, None)
+                    error_bar_name = error_bar_names.get(name, None)
 
-                # Always create ErrorBarItem in case averaging is enabled later.
-                error_bar_item = pyqtgraph.ErrorBarItem(pen=color)
+                    # Always create ErrorBarItem in case averaging is enabled later.
+                    error_bar_item = pyqtgraph.ErrorBarItem(pen=color)
 
-                self.series.append(
-                    _XYSeries(view_box, name, data_item, error_bar_name,
-                              error_bar_item))
+                    self.series.append(
+                        _XYSeries(view_box, name, data_item, error_bar_name,
+                                  error_bar_item))
 
-                channel = channels[name]
-                label = channel["description"]
-                if not label:
-                    label = channel["path"].split("/")[-1]
-                info.append((label, channel["path"], color, channel))
+                    channel = channels[name]
+                    label = channel["description"]
+                    if not label:
+                        label = channel["path"].split("/")[-1]
+                    info.append((label, channel["path"], color, channel))
 
-                series_idx += 1
+                    series_idx += 1
 
-            suffix, scale = setup_axis_item(axis, info)
-            self.y_unit_suffixes.append(suffix)
-            self.y_data_to_display_scales.append(scale)
-
+                suffix, scale = setup_axis_item(axis, info)
+                self.y_unit_suffixes.append(suffix)
+                self.y_data_to_display_scales.append(scale)
             add_source_id_label(view_box, self.model.context)
 
         if len(self.plots) > 1:

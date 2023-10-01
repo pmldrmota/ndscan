@@ -4,8 +4,8 @@ import pyqtgraph
 from .._qt import QtCore, QtWidgets
 from .model import SinglePointModel
 from .plot_widgets import add_source_id_label, AlternateMenuPlotWidget
-from .utils import (extract_scalar_channels, group_channels_into_axes, setup_axis_item,
-                    SERIES_COLORS)
+from .utils import (extract_scalar_channels, group_channels_into_axes,
+                    group_axes_into_plots, setup_axis_item, SERIES_COLORS)
 
 
 class _Series:
@@ -92,34 +92,36 @@ class Rolling1DPlotWidget(AlternateMenuPlotWidget):
 
         series_idx = 0
         axes = group_channels_into_axes(channels, data_names)
-        for names in axes:
+        plots_axes = group_axes_into_plots(channels, axes)
+        for axes_names in plots_axes:
             plot = self.new_plot()
-            axis, vb = plot.new_y_axis()
+            for names in axes_names:
+                axis, view_box = plot.new_y_axis()
 
-            info = []
-            for name in names:
-                color = SERIES_COLORS[series_idx % len(SERIES_COLORS)]
-                data_item = pyqtgraph.ScatterPlotItem(pen=None, brush=color, size=6)
+                info = []
+                for name in names:
+                    color = SERIES_COLORS[series_idx % len(SERIES_COLORS)]
+                    data_item = pyqtgraph.ScatterPlotItem(pen=None, brush=color, size=6)
 
-                error_bar_item = None
-                error_bar_name = error_bar_names.get(name, None)
-                if error_bar_name:
-                    error_bar_item = pyqtgraph.ErrorBarItem(pen=color)
+                    error_bar_item = None
+                    error_bar_name = error_bar_names.get(name, None)
+                    if error_bar_name:
+                        error_bar_item = pyqtgraph.ErrorBarItem(pen=color)
 
-                self.series.append(
-                    _Series(vb, name, data_item, error_bar_name, error_bar_item,
-                            self._history_length))
+                    self.series.append(
+                        _Series(view_box, name, data_item, error_bar_name, error_bar_item,
+                                self._history_length))
 
-                channel = channels[name]
-                label = channel["description"]
-                if not label:
-                    label = channel["path"].split("/")[-1]
-                info.append((label, channel["path"], color, channel))
+                    channel = channels[name]
+                    label = channel["description"]
+                    if not label:
+                        label = channel["path"].split("/")[-1]
+                    info.append((label, channel["path"], color, channel))
 
-                series_idx += 1
+                    series_idx += 1
 
-            setup_axis_item(axis, info)
-            add_source_id_label(vb, self.model.context)
+                setup_axis_item(axis, info)
+            add_source_id_label(view_box, self.model.context)
 
         self.ready.emit()
 
