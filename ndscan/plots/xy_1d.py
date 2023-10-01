@@ -13,8 +13,7 @@ from .model.subscan import create_subscan_roots
 from .plot_widgets import add_source_id_label, SubplotMenuPlotWidget
 from .utils import (extract_linked_datasets, extract_scalar_channels,
                     format_param_identity, group_channels_into_axes,
-                    group_axes_into_plots, setup_axis_item, FIT_COLORS,
-                    SERIES_COLORS)
+                    group_axes_into_plots, setup_axis_item, FIT_COLORS, SERIES_COLORS)
 
 logger = logging.getLogger(__name__)
 
@@ -248,14 +247,15 @@ class XY1DPlotWidget(SubplotMenuPlotWidget):
             self.link_x_axes()
 
         self.x_unit_suffix, self.x_data_to_display_scale = setup_axis_item(
-            self.plots[-1].getPlotItem().getAxis("bottom"),
+            self.plots[-1].getAxis("bottom"),
             [(self.x_schema["param"]["description"], format_param_identity(
                 self.x_schema), None, self.x_param_spec)])
 
         for i, plot in enumerate(self.plots):
             self.crosshairs.append(
-                LabeledCrosshairCursor(self, plot.getPlotItem(), self.x_unit_suffix,
-                                       self.x_data_to_display_scale, self.y_unit_suffixes[i],
+                LabeledCrosshairCursor(self, plot, self.x_unit_suffix,
+                                       self.x_data_to_display_scale,
+                                       self.y_unit_suffixes[i],
                                        self.y_data_to_display_scales[i]))
 
         self._monkey_patch_context_menu()

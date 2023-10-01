@@ -13,51 +13,43 @@ from .cursor import LabeledCrosshairCursor
 from .model import Context
 
 
-class MultiYAxisPlotWidget:
+class MultiYAxisPlotWidget(pyqtgraph.PlotItem):
     """Wrap PlotItem with the ability to create multiple y axes linked to the same x axis.
 
     This is somewhat of a hack following the MultiplePlotAxes pyqtgraph example.
     """
-    def __init__(self, plot_item):
+    def __init__(self):
         super().__init__()
-        self.plot_item = plot_item
         self._num_y_axes = 0
         self._additional_view_boxes = []
         self._additional_right_axes = []
 
-    def getPlotItem(self):
-        return self.plot_item
-
-    def getViewBox(self):
-        return self.plot_item.getViewBox()
-
     def new_y_axis(self):
         self._num_y_axes += 1
 
-        pi = self.getPlotItem()
         if self._num_y_axes == 1:
-            return pi.getAxis("left"), pi.getViewBox()
+            return self.getAxis("left"), self.getViewBox()
 
         vb = pyqtgraph.ViewBox()
 
         if self._num_y_axes == 2:
             # With more than one axis, we need to start resizing the linked views.
-            pi.getViewBox().sigResized.connect(self._update_additional_view_boxes)
+            self.getViewBox().sigResized.connect(self._update_additional_view_boxes)
 
-            pi.showAxis("right")
-            axis = pi.getAxis("right")
+            self.showAxis("right")
+            axis = self.getAxis("right")
         else:
             axis = pyqtgraph.AxisItem("right")
             # FIXME: Z value setting is cargo-culted in from the pyqtgraph example –
             # what should the correct value be?
             axis.setZValue(-10000)
             self._additional_right_axes.append(axis)
-            pi.layout.addItem(axis, 2, self._num_y_axes)
+            self.layout.addItem(axis, 2, self._num_y_axes)
 
-        pi.scene().addItem(vb)
+        self.scene().addItem(vb)
         axis.linkToView(vb)
         axis.setGrid(False)
-        vb.setXLink(pi)
+        vb.setXLink(self)
         self._additional_view_boxes.append(vb)
         self._update_additional_view_boxes()
         return axis, vb
@@ -65,10 +57,10 @@ class MultiYAxisPlotWidget:
     def reset_y_axes(self):
         # TODO: Do we need to unlink anything else to avoid leaking memory?
         for vb in self._additional_view_boxes:
-            self.getPlotItem().removeItem(vb)
+            self.removeItem(vb)
         self._additional_view_boxes = []
         for axis in self._additional_right_axes:
-            self.getPlotItem().layout.removeItem(axis)
+            self.layout.removeItem(axis)
         self._additional_right_axes = []
         self._num_y_axes = 0
 
@@ -87,15 +79,16 @@ class VerticalStackPlotWidget(pyqtgraph.GraphicsLayoutWidget):
     def new_plot(self):
         """Extends layout vertically by one `MultiYAxisPlotWidget`
         """
-        plot = MultiYAxisPlotWidget(self.addPlot())
+        plot = MultiYAxisPlotWidget()
+        self.addItem(plot)
         self.nextRow()
         self.plots.append(plot)
         return plot
 
     def link_x_axes(self):
         for plot in self.plots[:-1]:
-            plot.getPlotItem().setXLink(self.plots[-1].getPlotItem())
-            plot.getPlotItem().hideAxis("bottom")
+            plot.setXLink(self.plots[-1])
+            plot.hideAxis("bottom")
 
     def clear(self):
         for plot in self.plots:
@@ -166,7 +159,7 @@ class ContextMenuPlotWidget(VerticalStackPlotWidget):
             vb.raiseContextMenu = _raise_context_menu
 
         for i, plot in enumerate(self.plots):
-            _override_get_context_menus(i, plot.getPlotItem())
+            _override_get_context_menus(i, plot)
             _override_raise_context_menu(plot.getViewBox())
 
     def build_context_menu(self, plot_idx, builder: ContextMenuBuilder) -> None:
