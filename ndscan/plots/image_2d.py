@@ -197,7 +197,7 @@ class Image2DPlotWidget(AlternateMenuPlotWidget):
 
         self.x_schema, self.y_schema = self.model.axes
 
-        self.plot_item = self.new_plot()
+        self.plot_item = self.addPlot()
         self.plot = None
 
     def _initialise_series(self, channels):
@@ -242,8 +242,8 @@ class Image2DPlotWidget(AlternateMenuPlotWidget):
             return (schema.get(n, None) for n in ("min", "max", "increment"))
 
         image_item = pyqtgraph.ImageItem()
-        self.addItem(image_item)
-        colorbar = self.getPlotItem().addColorBar(image_item,
+        self.plot_item.addItem(image_item)
+        colorbar = self.plot_item.addColorBar(image_item,
                                                   width=15.0,
                                                   interactive=False)
         self.plot = _ImagePlot(image_item, colorbar, self.data_names[0],
